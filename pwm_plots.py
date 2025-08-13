@@ -7,7 +7,7 @@ gympybullet_pwm1_df = pd.read_csv('gympybullet_data/pwm1-0.csv', header=None, na
 gympybullet_pwm2_df = pd.read_csv('gympybullet_data/pwm2-0.csv', header=None, names=['time', 'pwm2'])
 gympybullet_pwm3_df = pd.read_csv('gympybullet_data/pwm3-0.csv', header=None, names=['time', 'pwm3'])
 
-firmware_df.columns = ['time', 'pwm0', 'pwm1', 'pwm2', 'pwm3']
+firmware_df.columns = ['time', 'pwm0', 'pwm1', 'pwm2', 'pwm3', 'activationTime']
 
 figure, axes = plt.subplots(2, 2, figsize=(12, 8), sharex=True)
 
@@ -29,6 +29,11 @@ for idx, ax in enumerate(axes.flatten()):
     ax.set_title(f'Motor {idx} PWM comparison')
     ax.set_ylabel('PWM Value')
     ax.legend()
+
+fig, axes2 = plt.subplots(1, 1, figsize=(12, 4), sharex=True)
+axes2.set_title('NN Computation time (ms)')
+axes2.set_ylabel('Activation Time (ms)')
+axes2.plot(firmware_df['time'].values, firmware_df['activationTime'].values, label='Activation Time', color='orange')
 
 for ax in axes[1]:
     ax.set_xlabel('Time')

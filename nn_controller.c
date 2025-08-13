@@ -42,6 +42,9 @@
 #include "log.h"
 #include "param.h"
 #include "led.h"
+#include "time.h"
+
+struct timespec start, end;
 
 static control_t_n control_n;
 struct vec euler_angles;
@@ -112,7 +115,11 @@ void controllerOutOfTree(
   state_array[10] = omega_pitch;
   state_array[11] = omega_yaw;
 
+  clock_gettime(CLOCK_MONOTONIC, &start);
   neuralNetworkComputation(&control_n, state_array);
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  control->activationTime = (end.tv_sec - start.tv_sec) * 1000.0;
+  control->activationTime += (end.tv_nsec - start.tv_nsec) / 1e6f;
 
   rpm2pwm(&control_n, &PWM_0, &PWM_1, &PWM_2, &PWM_3);
 
