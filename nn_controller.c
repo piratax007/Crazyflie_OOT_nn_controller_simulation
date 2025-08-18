@@ -156,10 +156,15 @@ void rpm2pwm(control_t_n *control_n, int *PWM_0, int *PWM_1, int *PWM_2, int *PW
   // *PWM_2 = 65536 * (a * (control_n->rpm_2 * control_n->rpm_2) + b * control_n->rpm_2 + c) / 100;
   // *PWM_3 = 65536 * (a * (control_n->rpm_3 * control_n->rpm_3) + b * control_n->rpm_3 + c) / 100;
 
-  *PWM_0 = (control_n->rpm_0 - 3900.0f) / 0.2685f;
+  // *PWM_0 = (control_n->rpm_0 - 3900.0f) / 0.2685f;
+  // *PWM_1 = (control_n->rpm_1 - 4070.3f) / 0.2685f;
+  // *PWM_2 = (control_n->rpm_2 - 4000.0f) / 0.2685f;
+  // *PWM_3 = (control_n->rpm_3 - 4000.0f) / 0.2685f;
+
+  *PWM_0 = (control_n->rpm_0 - 4070.3f) / 0.2685f;
   *PWM_1 = (control_n->rpm_1 - 4070.3f) / 0.2685f;
-  *PWM_2 = (control_n->rpm_2 - 4000.0f) / 0.2685f;
-  *PWM_3 = (control_n->rpm_3 - 4000.0f) / 0.2685f;
+  *PWM_2 = (control_n->rpm_2 - 4070.3f) / 0.2685f;
+  *PWM_3 = (control_n->rpm_3 - 4070.3f) / 0.2685f;
 }
 
 PARAM_GROUP_START(ctrlNN)
