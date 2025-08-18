@@ -1,10 +1,9 @@
-
+#include "math.h"
 #include "nn_compute.h"
 
 #define g 9.82
 #define mass 0.027
 #define kf 3.16e-10
-#define hoverRPM sqrtf((g * mass) / (4 * kf))
 
 static const int structure[3][2] = {{64, 12},{64, 64},{4, 64}};
 static float output_0[64];
@@ -17,35 +16,61 @@ static const float mlp_extractor_policy_net_0_bias[64] = {-0.0001556913048261776
 static const float mlp_extractor_policy_net_2_bias[64] = {0.05236365273594856,-0.022442534565925598,0.015721680596470833,-0.11129891127347946,-0.09479281306266785,-0.04491125047206879,-0.06197022646665573,-0.09791059792041779,-0.0015261579537764192,0.039030686020851135,-0.08906078338623047,0.09789831936359406,0.03685752674937248,0.04945985972881317,0.07956106215715408,0.03086448274552822,0.1338396966457367,0.02399441972374916,-0.01733260229229927,-0.03315999358892441,-0.04794630408287048,0.10032092034816742,-0.019613932818174362,-0.07657476514577866,0.03205285593867302,0.017230622470378876,0.021235991269350052,0.05074239894747734,0.010447384789586067,-0.03097572550177574,0.05323095992207527,-0.08415548503398895,-0.06659634411334991,-0.08128225803375244,0.009190574288368225,-0.033277206122875214,0.055316757410764694,0.007376883178949356,0.08508402854204178,-0.04262798652052879,0.03764339163899422,0.08788009732961655,0.11555957794189453,-0.01291896402835846,0.025092534720897675,-0.06712125241756439,0.03876987099647522,-0.013001435436308384,-0.04281817749142647,-0.026121117174625397,-0.00878750067204237,0.08343488723039627,0.023014308884739876,-0.05805265158414841,-0.07533297687768936,-0.014154975302517414,0.068863645195961,-0.047646984457969666,0.07612309604883194,-0.020770784467458725,-0.038104213774204254,-0.05477248877286911,0.047443535178899765,-0.000214296393096447};
 static const float action_net_bias[4] = {-0.02676982618868351,-0.026033444330096245,0.06155632063746452,0.06776992976665497};
 
+typedef enum { ACT_LINEAR = 0, ACT_TANH = 1 } nn_activation_t;
+
+static inline void dense_fma(
+    const float * __restrict x,
+    const float * __restrict W,
+    const float * __restrict b,
+    float * __restrict y,
+    const int out_dim,
+    const int in_dim,
+    const nn_activation_t act
+) {
+    for (int i = 0; i < out_dim; i++) {
+        const float * __restrict Wi = &W[(size_t)i * (size_t)in_dim];
+        float acc = b[i];
+
+    #pragma GCC unroll 16
+
+        for (int j = 0; j < in_dim; j++) {
+            acc = fmaf(x[j], Wi[j], acc);
+        }
+
+        y[i] = (act == ACT_TANH) ? tanhf(acc) : acc;
+    }
+}
+
+static const float kHoverRPM = (float)sqrt((g * mass) / (4.0f * kf));
+
+
 void neuralNetworkComputation(struct control_t_n *control_n, const float *state_array) {
-    for (int i = 0; i < structure[0][0]; i++) {
-        output_0[i] = 0;
-        for (int j = 0; j < structure[0][1]; j++) {
-            output_0[i] += state_array[j] * mlp_extractor_policy_net_0_weight[i][j];
-        }
-        output_0[i] += mlp_extractor_policy_net_0_bias[i];
-        output_0[i] = tanhf(output_0[i]);
-    }
+    dense_fma(
+        state_array,
+        &mlp_extractor_policy_net_0_weight[0][0],
+        &mlp_extractor_policy_net_0_bias[0],
+        &output_0[0],
+        64, 12, ACT_TANH
+    );
+
+    dense_fma(
+        &output_0[0],
+        &mlp_extractor_policy_net_2_weight[0][0],
+        &mlp_extractor_policy_net_2_bias[0],
+        &output_1[0],
+        64, 64, ACT_TANH
+    );
+
+    dense_fma(
+        &output_1[0],
+        &action_net_weight[0][0],
+        &action_net_bias[0],
+        &output_2[0],
+        4, 64, ACT_LINEAR
+    );
     
-    for (int i = 0; i < structure[1][0]; i++) {
-        output_1[i] = 0;
-        for (int j = 0; j < structure[1][1]; j++) {
-            output_1[i] += output_0[j] * mlp_extractor_policy_net_2_weight[i][j];
-        }
-        output_1[i] += mlp_extractor_policy_net_2_bias[1];
-        output_1[i] = tanhf(output_1[i]);
-    }
-    
-    for (int i = 0; i < structure[2][0]; i++) {
-        output_2[i] = 0;
-        for (int j = 0; j < structure[2][1]; j++) {
-            output_2[i] += output_1[j] * action_net_weight[i][j];
-        }
-        output_2[i] += action_net_bias[i];
-    }
-    
-    control_n->rpm_0 = hoverRPM * (1.0f + 0.05f * output_2[0]);
-    control_n->rpm_1 = hoverRPM * (1.0f + 0.05f * output_2[1]);
-    control_n->rpm_2 = hoverRPM * (1.0f + 0.05f * output_2[2]);
-    control_n->rpm_3 = hoverRPM * (1.0f + 0.05f * output_2[3]);
+    control_n->rpm_0 = kHoverRPM * (1.0f + 0.05f * output_2[0]);
+    control_n->rpm_1 = kHoverRPM * (1.0f + 0.05f * output_2[1]);
+    control_n->rpm_2 = kHoverRPM * (1.0f + 0.05f * output_2[2]);
+    control_n->rpm_3 = kHoverRPM * (1.0f + 0.05f * output_2[3]);
 }

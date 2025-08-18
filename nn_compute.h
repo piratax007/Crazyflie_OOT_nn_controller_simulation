@@ -6,6 +6,7 @@
 #define NN_COMPUTE_H
 
 #include <math.h>
+#include <stdlib.h>
 
 typedef struct control_t_n {
   float rpm_0;
