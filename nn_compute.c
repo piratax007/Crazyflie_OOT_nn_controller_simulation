@@ -1,4 +1,5 @@
 #include "nn_compute.h"
+#include "nn_golden_logger.h"
 
 #define g 9.8f
 #define mass 0.033f
@@ -65,6 +66,25 @@ void neuralNetworkComputation(struct control_t_n *control_n, const float *state_
         &output_2[0],
         structure[2][0], structure[2][1], ACT_LINEAR
     );
+
+    static int logger_inited = 0;
+    static int wrote_golden = 0;
+
+    if (!logger_inited) {
+        nn_golden_logger_init(NULL, 1);
+        logger_inited = 1;
+    }
+
+    float rpm_raw[NN_GOLDEN_ACT];
+    for (int i = 0; i < NN_GOLDEN_ACT; i++) {
+        rpm_raw[i] = kHoverRPM * (1.0f + 0.05f * output_2[i]);
+    }
+
+    if (!wrote_golden) {
+        nn_golden_logger_write_matrix(state_array, output_0, output_1, output_2, rpm_raw, 1);
+        nn_golden_logger_close();
+        wrote_golden = 1;
+    }
 
     control_n->rpm_0 = kHoverRPM * (1.0f + 0.05f * output_2[0]);
     control_n->rpm_1 = kHoverRPM * (1.0f + 0.05f * output_2[1]);
