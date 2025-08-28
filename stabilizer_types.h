@@ -221,7 +221,6 @@ typedef struct control_s {
   };
 
   uint16_t motorPwm[4];
-  float activationTime;
 
   control_mode_t controlMode;
 } control_t;
