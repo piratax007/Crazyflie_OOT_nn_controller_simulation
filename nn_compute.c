@@ -92,6 +92,10 @@ void neuralNetworkComputation(struct control_t_n *control_n, const float *state_
         wrote_golden = 1;
     }
 
+    for (int i = 0; i < 4; i++) {
+        output_2[i] = output_2[i] < -1.0f ? -1.0f : (output_2[i] > 1.0f ? 1.0f : output_2[i]);
+    }
+
     control_n->rpm_0 = kHoverRPM * (1.0f + 0.05f * output_2[0]);
     control_n->rpm_1 = kHoverRPM * (1.0f + 0.05f * output_2[1]);
     control_n->rpm_2 = kHoverRPM * (1.0f + 0.05f * output_2[2]);
