@@ -96,16 +96,10 @@
          state.position.y = (float)y[i];
          state.position.z = (float)z[i];
  
-        //  float roll  = r[i],
-        //         pitch = p[i],
-        //         yaw   = ya[i];
-        //  float cos_roll = cos(roll/2), sin_roll = sin(roll/2);
-        //  float cos_pitch = cos(pitch/2), sin_pitch = sin(pitch/2);
-        //  float cos_yaw = cos(yaw/2),   sin_yaw = sin(yaw/2);
-         state.attitudeQuaternion.x = (float)qx[i]; //(sin_roll*cos_pitch*cos_yaw - cos_roll*sin_pitch*sin_yaw);
-         state.attitudeQuaternion.y = (float)qy[i]; //(cos_roll*sin_pitch*cos_yaw + sin_roll*cos_pitch*sin_yaw);
-         state.attitudeQuaternion.z = (float)qz[i]; //(cos_roll*cos_pitch*sin_yaw - sin_roll*sin_pitch*cos_yaw);
-         state.attitudeQuaternion.w = (float)qw[i]; //(cos_roll*cos_pitch*cos_yaw + sin_roll*sin_pitch*sin_yaw);
+         state.attitudeQuaternion.x = (float)qx[i];
+         state.attitudeQuaternion.y = (float)qy[i];
+         state.attitudeQuaternion.z = (float)qz[i];
+         state.attitudeQuaternion.w = (float)qw[i];
  
          state.velocity.x = (float)vx[i];
          state.velocity.y = (float)vy[i];
