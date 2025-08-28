@@ -85,9 +85,6 @@ void controllerOutOfTree(
     ) {
   
   control->controlMode = controlModeNN;
-  // if (!RATE_DO_EXECUTE(RATE_500_HZ, tick)) {
-  //   return;
-  // }
 
   struct quat q = mkquat(
       state->attitudeQuaternion.x,
@@ -96,7 +93,7 @@ void controllerOutOfTree(
       state->attitudeQuaternion.w
   );
 
-  euler_angles = quat2rpy(q);
+  euler_angles = quat2rpy_xyz(q);
 
   float omega_roll = sensors->gyro.x;
   float omega_pitch = sensors->gyro.y;
@@ -105,9 +102,9 @@ void controllerOutOfTree(
   state_array[0] = state->position.x;
   state_array[1] = state->position.y;
   state_array[2] = state->position.z;
-  state_array[3] = radians(euler_angles.x);
-  state_array[4] = radians(euler_angles.y);
-  state_array[5] = radians(euler_angles.z);
+  state_array[3] = euler_angles.x;
+  state_array[4] = euler_angles.y;
+  state_array[5] = euler_angles.z;
   state_array[6] = state->velocity.x;
   state_array[7] = state->velocity.y;
   state_array[8] = state->velocity.z;
@@ -115,11 +112,10 @@ void controllerOutOfTree(
   state_array[10] = omega_pitch;
   state_array[11] = omega_yaw;
 
-  clock_gettime(CLOCK_MONOTONIC, &start);
   neuralNetworkComputation(&control_n, state_array);
-  clock_gettime(CLOCK_MONOTONIC, &end);
-  control->activationTime = (end.tv_sec - start.tv_sec) * 1000.0;
-  control->activationTime += (end.tv_nsec - start.tv_nsec) / 1e6f;
+  // clock_gettime(CLOCK_MONOTONIC, &end);
+  // control->activationTime = (end.tv_sec - start.tv_sec) * 1000.0;
+  // control->activationTime += (end.tv_nsec - start.tv_nsec) / 1e6f;
 
   rpm2pwm(&control_n, &PWM_0, &PWM_1, &PWM_2, &PWM_3);
 
@@ -139,32 +135,47 @@ void controllerOutOfTree(
 }
 
 void rpm2pwm(control_t_n *control_n, int *PWM_0, int *PWM_1, int *PWM_2, int *PWM_3) {
-  // const float a = 6.24e-10f;
-  // const float b = 2.14e-5f;
-
-  // *PWM_0 = 65535 * (a * (control_n->rpm_0 * (float)control_n->rpm_0) + b * (float)(control_n->rpm_0));
-  // *PWM_1 = 65535 * (a * (control_n->rpm_1 * (float)control_n->rpm_1) + b * (float)(control_n->rpm_1));
-  // *PWM_2 = 65535 * (a * (control_n->rpm_2 * (float)control_n->rpm_2) + b * (float)(control_n->rpm_2));
-  // *PWM_3 = 65535 * (a * (control_n->rpm_3 * (float)control_n->rpm_3) + b * (float)(control_n->rpm_3));
-
-  // const float a = 1.11984693e-07f;
-  // const float b = 1.42493452e-03f;
-  // const float c = -1.92966300e+00f;
-
-  // *PWM_0 = 65536 * (a * (control_n->rpm_0 * control_n->rpm_0) + b * control_n->rpm_0 + c) / 100;
-  // *PWM_1 = 65536 * (a * (control_n->rpm_1 * control_n->rpm_1) + b * control_n->rpm_1 + c) / 100;
-  // *PWM_2 = 65536 * (a * (control_n->rpm_2 * control_n->rpm_2) + b * control_n->rpm_2 + c) / 100;
-  // *PWM_3 = 65536 * (a * (control_n->rpm_3 * control_n->rpm_3) + b * control_n->rpm_3 + c) / 100;
-
-  // *PWM_0 = (control_n->rpm_0 - 3900.0f) / 0.2685f;
-  // *PWM_1 = (control_n->rpm_1 - 4070.3f) / 0.2685f;
-  // *PWM_2 = (control_n->rpm_2 - 4000.0f) / 0.2685f;
-  // *PWM_3 = (control_n->rpm_3 - 4000.0f) / 0.2685f;
-
   *PWM_0 = (control_n->rpm_0 - 4070.3f) / 0.2685f;
   *PWM_1 = (control_n->rpm_1 - 4070.3f) / 0.2685f;
   *PWM_2 = (control_n->rpm_2 - 4070.3f) / 0.2685f;
   *PWM_3 = (control_n->rpm_3 - 4070.3f) / 0.2685f;
+}
+
+static inline float clampf_pm1(float v) {
+  return (v > 1.0f) ? 1.0f : (v < -1.0f) ? -1.0f : v;
+}
+
+struct vec quat2rpy_xyz(struct quat q_xyzw) {
+  float x = q_xyzw.x;
+  float y = q_xyzw.y;
+  float z = q_xyzw.z;
+  float w = q_xyzw.w;
+
+  float s = w*w + x*x + y*y + z*z;
+  if (s > 0.0f) {
+    if (fabsf(1.0f - s) > 1e-6f) {
+      float inv = 1.0f / sqrtf(s);
+      w *= inv;
+      x *= inv;
+      y *= inv;
+      z *= inv;
+    }
+  }
+
+  struct vec e;
+
+  float sinr_cosp = 2.0f * (w*x + y*z);
+  float cosr_cosp = 1.0f - 2.0f * (x*x + y*y);
+  e.x = atan2f(sinr_cosp, cosr_cosp);
+
+  float sinp = 2.0f * (w*y - z*x);
+  e.y = asinf(clampf_pm1(sinp));
+
+  float siny_cosp = 2.0f * (w*z + x*y);
+  float cosy_cosp = 1.0f - 2.0f * (y*y + z*z);
+  e.z = atan2f(siny_cosp, cosy_cosp);
+
+  return e;
 }
 
 PARAM_GROUP_START(ctrlNN)
@@ -173,27 +184,3 @@ PARAM_GROUP_START(ctrlNN)
  */
 PARAM_ADD(PARAM_FLOAT, activateNN, &activateNN)
 PARAM_GROUP_STOP(ctrlNN)
-
-// LOG_GROUP_START(ctrlNN)
-// LOG_ADD(LOG_FLOAT, ob_x, &state_array[0])
-// LOG_ADD(LOG_FLOAT, ob_y, &state_array[1])
-// LOG_ADD(LOG_FLOAT, ob_z, &state_array[2])
-
-// LOG_ADD(LOG_FLOAT, ob_roll, &state_array[3])
-// LOG_ADD(LOG_FLOAT, ob_pitch, &state_array[4])
-// LOG_ADD(LOG_FLOAT, ob_yaw, &state_array[5])
-
-// LOG_ADD(LOG_FLOAT, ob_vx, &state_array[6])
-// LOG_ADD(LOG_FLOAT, ob_vy, &state_array[7])
-// LOG_ADD(LOG_FLOAT, ob_vz, &state_array[8])
-
-// LOG_ADD(LOG_FLOAT, ob_wx, &state_array[9])
-// LOG_ADD(LOG_FLOAT, ob_wy, &state_array[10])
-// LOG_ADD(LOG_FLOAT, ob_wz, &state_array[11])
-
-// LOG_ADD(LOG_FLOAT, nn_rpm_0, &control_n.rpm_0)
-// LOG_ADD(LOG_FLOAT, nn_rpm_1, &control_n.rpm_1)
-// LOG_ADD(LOG_FLOAT, nn_rpm_2, &control_n.rpm_2)
-// LOG_ADD(LOG_FLOAT, nn_rpm_3, &control_n.rpm_3)
-
-// LOG_GROUP_STOP(ctrlNN)
