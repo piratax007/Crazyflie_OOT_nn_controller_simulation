@@ -1,3 +1,5 @@
 .vscode/
-.o
+*.o
+*.obj
+nn_controller.o
 nn_controller_simulation
