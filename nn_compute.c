@@ -69,19 +69,25 @@ void neuralNetworkComputation(struct control_t_n *control_n, const float *state_
 
     static int logger_inited = 0;
     static int wrote_golden = 0;
+    float act_raw[NN_GOLDEN_ACT];
+    float act_clip[NN_GOLDEN_ACT];
+    float rpm_raw[NN_GOLDEN_ACT];
+    float rpm_clip[NN_GOLDEN_ACT];
 
     if (!logger_inited) {
         nn_golden_logger_init(NULL, 1);
         logger_inited = 1;
     }
 
-    float rpm_raw[NN_GOLDEN_ACT];
     for (int i = 0; i < NN_GOLDEN_ACT; i++) {
-        rpm_raw[i] = kHoverRPM * (1.0f + 0.05f * output_2[i]);
+        act_raw[i] = output_2[i];
+        act_clip[i] = (act_raw[i] < -1.0f) ? -1.0f : (act_raw[i] > 1.0f ? 1.0f : act_raw[i]);
+        rpm_raw[i] = kHoverRPM * (1.0f + 0.05f * act_raw[i]);
+        rpm_clip[i] = kHoverRPM * (1.0f + 0.05f * act_clip[i]);
     }
 
     if (!wrote_golden) {
-        nn_golden_logger_write_matrix(state_array, output_0, output_1, output_2, rpm_raw, 1);
+        nn_golden_logger_write_matrix(state_array, output_0, output_1, act_raw, act_clip, rpm_raw, rpm_clip, 1);
         nn_golden_logger_close();
         wrote_golden = 1;
     }
