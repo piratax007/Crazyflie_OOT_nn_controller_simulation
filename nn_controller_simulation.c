@@ -82,7 +82,7 @@
      int N = n_x;
  
      FILE *fp = fopen("pwm_log.csv","w");
-     fprintf(fp,"time,PWM0,PWM1,PWM2,PWM3,ActivationTime\n");
+     fprintf(fp,"time,PWM0,PWM1,PWM2,PWM3\n");
  
      controllerOutOfTreeInit();
  
@@ -111,11 +111,10 @@
  
          controllerOutOfTree(&control, &setpoint, &sensors, &state, t_x[i]);
  
-         fprintf(fp, "%f,%u,%u,%u,%u,%f\n",
+         fprintf(fp, "%f,%u,%u,%u,%u\n",
                  t_x[i],
                  control.motorPwm[0], control.motorPwm[1],
-                 control.motorPwm[2], control.motorPwm[3],
-                 control.activationTime
+                 control.motorPwm[2], control.motorPwm[3]
                 );
      }
  
