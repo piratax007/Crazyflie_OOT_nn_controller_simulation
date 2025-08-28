@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #ifndef NN_GOLDEN_DEFAULT_PATH
-#define NN_GOLDEN_DEFAULT_PATH "nn_log.csv"
+#define NN_GOLDEN_DEFAULT_PATH "nn_gold_log.csv"
 #endif
 
 static FILE *g_fp = NULL;
@@ -21,14 +21,14 @@ void nn_golden_logger_init(const char *path, int truncate) {
     atexit(nn_golden_on_exit);
     // header
     if (truncate) {
-        fprintf(g_fp, "obs,h1,h2,act_raw,rpm_raw\n");
+        fprintf(g_fp, "obs,h1,h2,act_raw,act_clip,rpm_raw,rpm_clip\n");
         fflush(g_fp);
         g_header_written = 1;
     } else {
         fseek(g_fp, 0, SEEK_END);
         long sz = ftell(g_fp);
         if (sz == 0) {
-            fprintf(g_fp, "obs,h1,h2,act_raw,rpm_raw\n");
+            fprintf(g_fp, "obs,h1,h2,act_raw,act_clip,rpm_raw,rpm_clip\n");
             fflush(g_fp);
         }
         g_header_written = 1;
@@ -50,7 +50,9 @@ void nn_golden_logger_write_matrix(const float obs[NN_GOLDEN_OBS],
                                    const float h1[NN_GOLDEN_HID],
                                    const float h2[NN_GOLDEN_HID],
                                    const float act_raw[NN_GOLDEN_ACT],
+                                   const float act_clip[NN_GOLDEN_ACT],
                                    const float rpm_raw[NN_GOLDEN_ACT],
+                                   const float rpm_clip[NN_GOLDEN_ACT],
                                    int write_once) {
     if (!g_fp) return;
     if (write_once && g_written_once) return;
@@ -68,9 +70,11 @@ void nn_golden_logger_write_matrix(const float obs[NN_GOLDEN_OBS],
 
         // col 4: act_raw (rows 0..3)
         print_field_or_empty(g_fp, r < NN_GOLDEN_ACT, (r < NN_GOLDEN_ACT) ? act_raw[r] : 0.0f, 1);
+        print_field_or_empty(g_fp, r < NN_GOLDEN_ACT, (r < NN_GOLDEN_ACT) ? act_clip[r] : 0.0f, 1);
 
         // col 5: rpm_raw (rows 0..3) — no trailing comma
-        print_field_or_empty(g_fp, r < NN_GOLDEN_ACT, (r < NN_GOLDEN_ACT) ? rpm_raw[r] : 0.0f, 0);
+        print_field_or_empty(g_fp, r < NN_GOLDEN_ACT, (r < NN_GOLDEN_ACT) ? rpm_raw[r] : 0.0f, 1);
+        print_field_or_empty(g_fp, r < NN_GOLDEN_ACT, (r < NN_GOLDEN_ACT) ? rpm_clip[r] : 0.0f, 0);
 
         fputc('\n', g_fp);
     }
