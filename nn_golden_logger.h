@@ -21,7 +21,9 @@ void nn_golden_logger_write_matrix(const float obs[NN_GOLDEN_OBS],
                                    const float h1[NN_GOLDEN_HID],
                                    const float h2[NN_GOLDEN_HID],
                                    const float act_raw[NN_GOLDEN_ACT],
+                                   const float act_clip[NN_GOLDEN_ACT],
                                    const float rpm_raw[NN_GOLDEN_ACT],
+                                   const float rpm_clip[NN_GOLDEN_ACT],
                                    int write_once);
 
 // Close the file (also auto-closed at process exit)
